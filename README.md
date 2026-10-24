@@ -1,6 +1,10 @@
 # 人格光谱 · Persona Spectrum
 
+**线上地址**:https://dreamrain314.github.io/persona-spectrum/
+
 基于大五人格模型(Big Five / OCEAN)的在线心理测评公共网页。纯静态、零构建、零依赖,可直接部署到 GitHub Pages 等任意静态托管。
+
+> 线上(纯静态托管)说明:除 AI 深度解读外的全部功能开箱即用;AI 解读在线上支持 DeepSeek / OpenAI 等允许浏览器直连的服务商,智谱用户需本地模式(`node server.js`)或自建中转。
 
 ## 特性
 
