@@ -32,8 +32,8 @@ function observeReveals(root = document) {
 function loadHistory() {
   try {
     const hist = JSON.parse(localStorage.getItem("ps-history") ?? "[]");
-    return hist[0] ?? null;
-  } catch { return null; }
+    return Array.isArray(hist) ? hist : [];
+  } catch { return []; }
 }
 
 function fmtRemaining(ms) {
@@ -67,11 +67,43 @@ export function renderLanding(app, state, h) {
       <div class="trait-strip reveal" style="--i:5">
         ${ORDER.map((k) => `<span class="trait-item"><span class="dot dot-${k}"></span>${DOMAINS[k].name}<span class="en">${DOMAINS[k].en}</span></span>`).join("")}
       </div>
-      ${hist ? `<p class="history-entry reveal" style="--i:6">上次测评:${hist.date?.slice(0, 10) ?? ""} · 「${hist.title}」——<a data-action="again">再测一次</a></p>` : ""}
+      ${historyHtml(hist)}
     </section>`;
   app.querySelector("[data-action='begin']").addEventListener("click", h.begin);
-  app.querySelector("[data-action='again']")?.addEventListener("click", h.begin);
+  app.querySelectorAll("[data-action='history-view']").forEach((b) =>
+    b.addEventListener("click", () => h.viewHistory(+b.dataset.historyView))
+  );
   observeReveals(app);
+}
+
+function historyHtml(hist) {
+  if (!hist.length) return "";
+  const rows = hist.slice(0, 3).map((e, i) => {
+    const d = (e.date ?? "").slice(0, 10);
+    const mode = e.mode === "short" ? "快速版" : "完整版";
+    const pcts = e.percentiles ?? {};
+    const bars = ORDER.map((k) =>
+      `<span class="hist-bar" title="${DOMAINS[k].name} ${pcts[k] ?? "—"}%ile"><i style="width:${Math.max(4, Math.min(100, pcts[k] ?? 0))}%;background:var(--${k.toLowerCase()}-fill)"></i></span>`
+    ).join("");
+    const view = e.snapshot
+      ? `<button class="btn btn-ghost hist-view" data-action="history-view" data-history-view="${i}">查看完整报告 →</button>`
+      : `<span class="hist-slim">(早期记录,仅摘要)</span>`;
+    return `
+      <div class="history-row">
+        <span class="hist-date">${d}</span>
+        <span class="hist-mode">${mode}</span>
+        <span class="hist-title">「${e.title ?? "—"}」</span>
+        <span class="hist-bars">${bars}</span>
+        ${view}
+      </div>`;
+  }).join("");
+  const more = hist.length > 3 ? `<p class="hist-more">另有 ${hist.length - 3} 条更早的记录(本浏览器最多保留 5 条)</p>` : "";
+  return `
+    <div class="history-block reveal" style="--i:6">
+      <p class="hist-head">你的测评记录 · 只存在这个浏览器里</p>
+      ${rows}
+      ${more}
+    </div>`;
 }
 
 /* ---------- 模式选择 ---------- */
@@ -223,6 +255,7 @@ export function renderReport(app, state, h) {
         <h1 class="serif-display reveal" style="--i:1">${r.title}</h1>
         <p class="report-motto reveal" style="--i:2">「${r.motto}」</p>
         <p class="title-note reveal" style="--i:3">称号是对你分数组合的记忆装置,不是人格分类——你的五个维度都是连续的刻度。</p>
+        ${state.viewingHistory ? `<p class="history-banner reveal" style="--i:3">你正在回看 ${String(state.viewingHistory).slice(0, 10)} 的历史报告,数据与当时完全一致。</p>` : ""}
       </div>
 
       ${qualityHtml(r)}

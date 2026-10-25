@@ -210,6 +210,42 @@ html { scrollbar-color: #d8d5cf var(--bg); scrollbar-width: thin; }
 }
 .history-entry a { color: var(--ink); cursor: pointer; text-decoration: underline; text-underline-offset: 3px; }
 
+/* ---------- 测评记录(landing) ---------- */
+.history-block {
+  margin-top: 2.5rem; padding-top: 1.5rem; border-top: 1px solid var(--hair);
+}
+.hist-head {
+  font: 500 0.78rem var(--mono); letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--muted); margin: 0 0 0.9rem;
+}
+.history-row {
+  display: flex; align-items: center; gap: 0.9rem; flex-wrap: wrap;
+  padding: 0.7rem 0; border-bottom: 1px dashed var(--hair);
+  font-size: 0.88rem; color: var(--muted);
+}
+.history-row:last-of-type { border-bottom: none; }
+.hist-date { font: 400 0.78rem var(--mono); color: var(--muted); }
+.hist-mode {
+  font-size: 0.72rem; padding: 0.15rem 0.55rem; border-radius: 99px;
+  background: var(--surface-warm); color: var(--ink-soft);
+}
+.hist-title { color: var(--ink); font-weight: 600; }
+.hist-bars { display: inline-flex; gap: 3px; align-items: flex-end; height: 14px; }
+.hist-bar { width: 5px; height: 100%; background: var(--hair); border-radius: 2px; overflow: hidden; display: inline-block; }
+.hist-bar i { display: block; height: 100%; border-radius: 2px; }
+.hist-view { padding: 0.45rem 1rem; font-size: 0.82rem; margin-left: auto; }
+.hist-slim { font-size: 0.78rem; margin-left: auto; }
+.hist-more { font-size: 0.78rem; color: var(--muted); margin: 0.8rem 0 0; }
+.history-banner {
+  margin-top: 1rem; padding: 0.55rem 1rem; display: inline-block;
+  background: var(--surface-warm); border-radius: 8px;
+  font-size: 0.8rem; color: var(--ink-soft);
+}
+@media (max-width: 720px) {
+  .history-row { gap: 0.5rem 0.8rem; }
+  .hist-view, .hist-slim { margin-left: 0; }
+}
+
 /* ---------- 模式选择 ---------- */
 .mode-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.2rem; margin: 2.2rem 0; }
 @media (max-width: 720px) { .mode-grid { grid-template-columns: 1fr; } }

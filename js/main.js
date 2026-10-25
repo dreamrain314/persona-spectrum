@@ -15,6 +15,7 @@ const state = {
   index: 0,
   results: null,       // engine.computeAll 输出
   startedAt: null,
+  viewingHistory: null, // 非空表示正在回看历史报告(值为记录日期)
 };
 
 const app = document.getElementById("app");
@@ -86,8 +87,10 @@ const handlers = {
   restart() {
     state.mode = null; state.items = []; state.answers = {};
     state.index = 0; state.results = null; state.selfRatings = null;
+    state.viewingHistory = null;
     go("landing");
   },
+  viewHistory,
 };
 
 // 「关于量表」全局入口(页眉)
@@ -111,18 +114,58 @@ document.addEventListener("keydown", (e) => {
 });
 
 function saveHistory(s) {
-  try {
-    const key = "ps-history";
-    const hist = JSON.parse(localStorage.getItem(key) ?? "[]");
-    hist.unshift({
-      date: new Date().toISOString(),
+  const entry = {
+    date: new Date().toISOString(),
+    mode: s.mode,
+    title: s.results?.title ?? "",
+    motto: s.results?.motto ?? "",
+    percentiles: s.results?.domainPcts ?? {},
+    snapshot: {
       mode: s.mode,
-      title: s.results?.title ?? "",
-      motto: s.results?.motto ?? "",
-      percentiles: s.results?.domainPcts ?? {},
-    });
-    localStorage.setItem(key, JSON.stringify(hist.slice(0, 5)));
-  } catch { /* 隐私模式下静默跳过 */ }
+      items: s.items.map((i) => i.num),
+      selfRatings: s.selfRatings,
+      answers: s.answers,
+      results: s.results,
+    },
+  };
+  const key = "ps-history";
+  const read = () => { try { return JSON.parse(localStorage.getItem(key) ?? "[]"); } catch { return []; } };
+  const write = (rows) => localStorage.setItem(key, JSON.stringify(rows.slice(0, 5)));
+  try {
+    const hist = read();
+    hist.unshift(entry);
+    write(hist);
+  } catch {
+    // localStorage 写满/隐私模式:降级为仅摘要(不带快照),测评主流程不受影响
+    try {
+      const slim = { ...entry };
+      delete slim.snapshot;
+      const hist = read();
+      hist.unshift(slim);
+      write(hist);
+    } catch { /* 彻底不可用,放弃记录 */ }
+  }
+}
+
+// 从历史记录完整回看:localStorage 快照 → 重建 state → 直接进报告
+function viewHistory(idx) {
+  let hist = [];
+  try { hist = JSON.parse(localStorage.getItem("ps-history") ?? "[]"); } catch { return; }
+  const entry = hist[idx];
+  if (!entry) return;
+  const snap = entry.snapshot;
+  if (!snap?.results) {
+    alert("这条是早期版本存的记录,只留有摘要,看不了完整报告——重新测一次就有了。");
+    return;
+  }
+  state.mode = snap.mode;
+  state.items = snap.mode === "short" ? ITEMS.filter((i) => i.short) : ITEMS.slice();
+  state.answers = snap.answers ?? {};
+  state.selfRatings = snap.selfRatings ?? null;
+  state.results = snap.results;
+  state.viewingHistory = entry.date ?? null;
+  state.index = Math.max(0, state.items.findIndex((it) => state.answers[it.num] == null));
+  go("report");
 }
 
 go("landing");

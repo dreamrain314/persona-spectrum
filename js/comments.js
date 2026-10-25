@@ -99,45 +99,73 @@ export async function renderComments(mount, title) {
   };
 
   let client = null;
-  try {
-    client = await getClient();
-    const { data, error } = await client
-      .from("comments")
-      .select("id,nickname,content,created_at")
-      .eq("title", title)
-      .order("created_at", { ascending: false })
-      .limit(50);
-    if (error) throw error;
-    renderList(data ?? []);
-  } catch {
-    listEl.innerHTML = "";
-    const empty = document.createElement("div");
-    empty.className = "comment-empty";
-    empty.textContent = "评论区暂时无法加载,请稍后再试。";
-    listEl.appendChild(empty);
-    return;
-  }
+  let subscribed = false;
 
-  // 实时接收新评论(真实 Supabase 环境;本地预览 mock 无 websocket,静默跳过)
-  try {
-    if (/supabase\.(co|com|net)$/.test(new URL(COMMENT_CONFIG.supabaseUrl).hostname)) {
-      client
-        .channel("comments-" + title)
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "comments", filter: "title=eq." + title },
-          (payload) => {
-            const row = payload?.new;
-            if (!row) return;
-            if (row.id != null && listEl.querySelector(`[data-cid='${row.id}']`)) return;
-            const empty = listEl.querySelector(".comment-empty");
-            if (empty) empty.remove();
-            listEl.prepend(rowEl(row));
-          }
-        )
-        .subscribe();
+  // 实时订阅:仅在 client 首次就绪时执行一次,与列表加载解耦(重试不重复订阅)
+  const subscribe = (c) => {
+    if (subscribed) return;
+    subscribed = true;
+    try {
+      if (/supabase\.(co|com|net)$/.test(new URL(COMMENT_CONFIG.supabaseUrl).hostname)) {
+        c.channel("comments-" + title)
+          .on(
+            "postgres_changes",
+            { event: "INSERT", schema: "public", table: "comments", filter: "title=eq." + title },
+            (payload) => {
+              const row = payload?.new;
+              if (!row) return;
+              if (row.id != null && listEl.querySelector(`[data-cid='${row.id}']`)) return;
+              const empty = listEl.querySelector(".comment-empty");
+              if (empty) empty.remove();
+              listEl.prepend(rowEl(row));
+            }
+          )
+          .subscribe();
+      }
+    } catch { /* 实时不可用不影响基础功能 */ }
+  };
+
+  // 加载失败态:保留评论区整体框架,列表区给友好提示+重试,发布同步禁用
+  const renderLoadError = () => {
+    listEl.innerHTML = "";
+    const box = document.createElement("div");
+    box.className = "comment-empty";
+    box.appendChild(document.createTextNode("评论没能加载出来——多半是网络波动,稍等一下可以重试。"));
+    const retry = document.createElement("button");
+    retry.className = "btn btn-ghost";
+    retry.id = "comment-retry";
+    retry.textContent = "重新加载";
+    retry.addEventListener("click", () => {
+      retry.disabled = true;
+      retry.textContent = "加载中……";
+      loadList();
+    });
+    box.appendChild(retry);
+    listEl.appendChild(box);
+    btnEl.disabled = true;
+    showMsg("评论区服务暂不可用,发布已暂停;其他功能不受影响。");
+  };
+
+  const loadList = async () => {
+    try {
+      client = await getClient();
+      subscribe(client);
+      const { data, error } = await client
+        .from("comments")
+        .select("id,nickname,content,created_at")
+        .eq("title", title)
+        .order("created_at", { ascending: false })
+        .limit(50);
+      if (error) throw error;
+      hideMsg();
+      btnEl.disabled = false;
+      renderList(data ?? []);
+    } catch {
+      renderLoadError();
     }
-  } catch { /* 实时不可用不影响基础功能 */ }
+  };
+
+  await loadList();
 
   btnEl.addEventListener("click", async () => {
     hideMsg();
