@@ -44,12 +44,12 @@ export function normalCdf(z) {
   return z >= 0 ? p : 1 - p;
 }
 
-/** 原始均分 → 常模百分位(0-100 整数)。无常模返回 null */
+/** 原始均分 → 常模百分位(1-99 整数,极端值钳制)。无常模返回 null */
 export function toPercentile(score, domain) {
   const norm = NORMS[domain];
   if (norm == null || score == null) return null;
   const z = (score - norm.mean) / norm.sd;
-  return Math.round(normalCdf(z) * 100);
+  return Math.min(99, Math.max(1, Math.round(normalCdf(z) * 100)));
 }
 
 /** 批量:维度分 → 百分位映射 */
@@ -59,23 +59,25 @@ export function domainPercentiles(scores) {
   return out;
 }
 
-/** 侧面分 → 百分位(若常模含侧面级则用之,否则用维度常模近似) */
+/** 侧面分 → 百分位(若常模含侧面级则用之,否则用维度常模近似;极端值钳制 1-99) */
 export function facetPercentiles(facets) {
   const out = {};
   for (const fid of Object.keys(facets)) {
     const d = fid[0];
     const norm = NORMS[fid] ?? NORMS[d];
-    out[fid] = norm == null || facets[fid] == null ? null : Math.round(normalCdf((facets[fid] - norm.mean) / norm.sd) * 100);
+    if (norm == null || facets[fid] == null) { out[fid] = null; continue; }
+    out[fid] = Math.min(99, Math.max(1, Math.round(normalCdf((facets[fid] - norm.mean) / norm.sd) * 100)));
   }
   return out;
 }
 
-/** 档位划分:百分位 → 1 极低 / 2 偏低 / 3 中等 / 4 偏高 / 5 极高 */
+/** 档位划分:百分位 → 1 极低 / 2 偏低 / 3 中等 / 4 偏高 / 5 极高
+ *  边界与交互规则 hi/lo 阈值(>=65 / <=35)严格一致:35 落 2 档、65 落 4 档 */
 export function gradeOf(pct) {
   if (pct == null) return null;
   if (pct < 10) return 1;
-  if (pct < 35) return 2;
-  if (pct <= 65) return 3;
+  if (pct < 36) return 2;
+  if (pct <= 64) return 3;
   if (pct <= 90) return 4;
   return 5;
 }

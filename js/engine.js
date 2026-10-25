@@ -95,11 +95,15 @@ export function pickEvidence(items, answers) {
     const scored = byDomain[d]
       .map(({ it, rec }) => ({ it, rec, s: itemScore(it, rec.v) }))
       .sort((a, b) => Math.abs(b.s - 3) - Math.abs(a.s - 3));
+    // 一高一低:高于中性的取最偏一条、低于中性的取最偏一条;某侧缺失时从剩余补最偏
     const picked = [];
+    const highs = scored.filter((p) => p.s > 3);
+    const lows = scored.filter((p) => p.s < 3);
+    if (highs.length) picked.push(highs[0]);
+    if (lows.length) picked.push(lows[0]);
     for (const cand of scored) {
       if (picked.length >= 2) break;
-      if (picked.some((p) => p.s === cand.s)) continue; // 一高一低
-      picked.push(cand);
+      if (!picked.includes(cand)) picked.push(cand);
     }
     for (const p of picked) {
       evidence.push({

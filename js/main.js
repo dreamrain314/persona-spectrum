@@ -73,6 +73,16 @@ const handlers = {
       go("quiz");
     }
   },
+  nextQuestion() {
+    const next = state.items[state.index + 1];
+    if (!next) return;
+    let frontier = state.items.findIndex((it) => state.answers[it.num] == null);
+    if (frontier === -1) frontier = state.items.length;
+    if (state.index + 1 <= frontier) {
+      state.index += 1;
+      go("quiz");
+    }
+  },
   restart() {
     state.mode = null; state.items = []; state.answers = {};
     state.index = 0; state.results = null; state.selfRatings = null;
@@ -93,8 +103,10 @@ document.addEventListener("keydown", (e) => {
   if (e.key >= "1" && e.key <= "5") {
     const btn = document.querySelector(`.opt[data-v='${e.key}']`);
     if (btn && !btn.disabled) btn.click();
-  } else if (e.key === "ArrowLeft" && rec) {
+  } else if (e.key === "ArrowLeft") {
     handlers.prevQuestion();
+  } else if (e.key === "ArrowRight") {
+    handlers.nextQuestion();
   }
 });
 

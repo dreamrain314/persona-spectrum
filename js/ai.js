@@ -53,6 +53,9 @@ export async function streamChat(messages, onDelta, onThinking) {
     const res = await fetch(url, { method: "POST", headers, body: payload });
     if (!res.ok) {
       const detail = await res.text().catch(() => "");
+      if (res.status === 401) {
+        throw new ApiError(401, "Key 无效或与所选服务商不匹配(注意:每家服务商的 Key 不通用,切换服务商后需重新填写)");
+      }
       throw new ApiError(res.status, detail);
     }
     if (!res.body) return "";
@@ -98,13 +101,14 @@ export async function streamChat(messages, onDelta, onThinking) {
       onThinking?.("", true); // 代理成功信号
       return out;
     } catch (e2) {
+      // 404/405/501 都是「这个环境没有代理」:本地纯静态服务返回 404/501,GitHub Pages 对 POST 返回 405
       const proxyMissing =
-        e2 instanceof TypeError || (e2 instanceof ApiError && [404, 501].includes(e2.status));
+        e2 instanceof TypeError || (e2 instanceof ApiError && [404, 405, 501].includes(e2.status));
       if (proxyMissing) {
         throw new Error(
-          "浏览器直连被服务商跨域策略(CORS)拦截,且当前页面没有本地代理。" +
-          "两种解决办法:① 在项目目录运行 node server.js 并通过它打开本页(推荐,智谱可用);" +
-          "② 换用支持浏览器直连的服务商(如 DeepSeek / OpenAI)。"
+          "浏览器直连被服务商跨域策略(CORS)拦截,且当前页面没有可用的本地代理(线上静态托管如 GitHub Pages 不提供代理)。" +
+          "解决办法:① 本地使用:在项目目录运行 node server.js 并通过它打开本页;② 线上使用:改用支持浏览器直连的服务商(DeepSeek / OpenAI);" +
+          "③ 自建中转:在「自定义」里填写你自己部署的允许跨端的 OpenAI 兼容地址。"
         );
       }
       throw e2;

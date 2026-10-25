@@ -257,7 +257,9 @@ input[type="range"]::-moz-range-thumb {
 .quiz-wrap { padding: clamp(2rem, 6vh, 3.5rem) 0; }
 .quiz-top { display: flex; justify-content: space-between; align-items: baseline; font: 500 0.78rem var(--mono); color: var(--muted); letter-spacing: 0.06em; margin-bottom: 2.8rem; }
 .quiz-top button { background: none; border: none; font: inherit; color: var(--muted); cursor: pointer; }
-.quiz-top button:hover { color: var(--ink); }
+.quiz-top button:hover:not([disabled]) { color: var(--ink); }
+.quiz-top button[disabled] { opacity: 0.3; cursor: default; }
+.quiz-nav { display: flex; gap: 1.4rem; }
 .progress-track { height: 2px; background: var(--hair); border-radius: 2px; margin-bottom: 3rem; }
 .progress-fill { height: 100%; background: var(--ink); border-radius: 2px; transform-origin: left; transition: transform 0.45s var(--ease); }
 .quiz-item { max-width: 44rem; margin: 0 auto; text-align: center; }

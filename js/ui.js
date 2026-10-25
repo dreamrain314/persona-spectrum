@@ -37,9 +37,8 @@ function loadHistory() {
 }
 
 function fmtRemaining(ms) {
-  if (ms <= 0) return "计算中…";
-  const min = Math.round(ms / 60000);
-  return min >= 1 ? `约 ${min} 分钟` : "不到 1 分钟";
+  const min = Math.max(1, Math.ceil(ms / 60000));
+  return `约 ${min} 分钟`;
 }
 
 /* ---------- Landing ---------- */
@@ -157,16 +156,22 @@ export function renderQuiz(app, state, h) {
   const rec = state.answers[item.num];
   const shownAt = performance.now();
 
-  const answeredMs = Object.values(state.answers).map((a) => a.ms).filter((m) => m > 0);
-  const avgMs = answeredMs.length ? answeredMs.reduce((s, m) => s + m, 0) / answeredMs.length : 11000;
-  const remainingMs = (items.length - idx - 1) * avgMs;
+  // 下一题可前进到「答题前沿」(第一个未作答题);已在前沿或末题时变灰
+  const nextItem = items[idx + 1];
+  let frontier = items.findIndex((it) => state.answers[it.num] == null);
+  if (frontier === -1) frontier = items.length;
+  const canNext = !!nextItem && idx + 1 <= frontier;
+  const remainingMs = (items.length - idx - 1) * 20000; // 按每题 20 秒估算
 
   app.innerHTML = `
     <section class="quiz-wrap">
       <div class="quiz-top">
         <span>第 ${idx + 1} 题 / 共 ${items.length} 题</span>
         <span>预计剩余 ${fmtRemaining(remainingMs)}</span>
-        ${idx > 0 || rec ? "<button data-action='prev'>← 上一题</button>" : "<span></span>"}
+        <span class="quiz-nav">
+          <button data-action="prev" ${idx === 0 ? "disabled" : ""}>← 上一题</button>
+          <button data-action="next" ${canNext ? "" : "disabled"}>下一题 →</button>
+        </span>
       </div>
       <div class="progress-track"><div class="progress-fill" style="transform:scaleX(${idx / items.length})"></div></div>
       <div class="quiz-item qitem-enter">
@@ -181,7 +186,7 @@ export function renderQuiz(app, state, h) {
           </button>`
           ).join("")}
         </div>
-        <p class="quiz-hint">键盘 <kbd>1</kbd>–<kbd>5</kbd> 快速作答 · <kbd>←</kbd> 回看上一题</p>
+        <p class="quiz-hint">键盘 <kbd>1</kbd>–<kbd>5</kbd> 快速作答 · <kbd>←</kbd> 上一题 · <kbd>→</kbd> 下一题</p>
       </div>
     </section>`;
 
@@ -189,6 +194,9 @@ export function renderQuiz(app, state, h) {
     b.addEventListener("click", () => h.answer(+b.dataset.v, performance.now() - shownAt))
   );
   app.querySelector("[data-action='prev']")?.addEventListener("click", h.prevQuestion);
+  app.querySelector("[data-action='next']")?.addEventListener("click", () => {
+    if (canNext) h.nextQuestion();
+  });
 }
 
 /* ---------- 过渡 ---------- */
@@ -457,7 +465,7 @@ function configFormHtml(cfg) {
         <input type="text" id="ai-model" value="${cur.model}" placeholder="glm-4-air / deepseek-chat …" />
       </label>
       <label>API Key
-        <input type="password" id="ai-key" value="" placeholder="粘贴你的 Key" autocomplete="off" />
+        <input type="password" id="ai-key" value="" placeholder="已保存过可留空(保持不变)" autocomplete="off" />
       </label>
     </div>
     <button class="btn" id="ai-save">保存配置</button>`;
@@ -465,9 +473,10 @@ function configFormHtml(cfg) {
 
 function readyRowHtml(cfg) {
   const label = AI.PRESETS[cfg.preset]?.label ?? cfg.base;
+  const masked = cfg.key ? cfg.key.slice(0, 3) + "…" + cfg.key.slice(-4) + "(已保存)" : "未保存";
   return `
     <div class="ai-ready-row" style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin:1.2rem 0">
-      <span style="font-size:0.85rem;color:var(--muted)">当前:${label} · ${cfg.model}</span>
+      <span style="font-size:0.85rem;color:var(--muted)">当前:${label} · ${cfg.model} · Key ${masked}</span>
       <button class="btn btn-ghost" id="ai-edit" style="padding:0.6rem 1.2rem">修改配置</button>
       <button class="btn" id="ai-generate">生成 AI 深度解读 →</button>
     </div>`;
@@ -493,13 +502,18 @@ function bindAI(app, state, r) {
     configArea.querySelector("#ai-save").addEventListener("click", () => {
       const key = configArea.querySelector("#ai-key").value.trim();
       const cfg = AI.loadConfig() ?? {};
+      const presetChanged = cfg.preset !== presetSel.value;
+      const effectiveKey = key || (presetChanged ? "" : cfg.key || "");
+      if (!effectiveKey) {
+        alert(presetChanged ? "切换了服务商,请填写该服务商的 API Key" : "请填写 API Key");
+        return;
+      }
       const next = {
         preset: presetSel.value,
         base: baseInp.value.trim(),
         model: modelInp.value.trim(),
-        key: key || cfg.key || "",
+        key: effectiveKey,
       };
-      if (!next.key) { alert("请填写 API Key(或点修改前先保存过)"); return; }
       if (!next.base) { alert("请填写接口地址"); return; }
       AI.saveConfig(next);
       configArea.innerHTML = readyRowHtml(next);
