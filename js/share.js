@@ -66,8 +66,9 @@ export function drawShareCard(data) {
 
   drawRadar(g, data.values, 310, midCy, Math.min(235, (midBottom - midTop) / 2 - 58));
 
-  // 五维条(右栏:x 600-984)
-  const barX = 620, barW = 984 - barX - 96; // 轨道宽,右侧留数值位
+  // 五维条(右栏:标签 620-710,轨道 722-924,数值右对齐 984;轨道不压标签)
+  const barX = 620;
+  const trackX = 722, trackW = 924 - trackX;
   const rowH = 64;
   const rowsTop = midCy - ((ORDER.length - 1) * rowH) / 2 - 18;
   ORDER.forEach((k, i) => {
@@ -77,9 +78,9 @@ export function drawShareCard(data) {
     g.textAlign = "left";
     g.fillText(DOMAINS[k].name, barX, y + 38);
     g.fillStyle = PALETTE.hair;
-    g.fillRect(barX, y + 18, barW, 16);
+    g.fillRect(trackX, y + 18, trackW, 16);
     g.fillStyle = PALETTE[k];
-    g.fillRect(barX, y + 18, (barW * (data.values[k] ?? 0)) / 100, 16);
+    g.fillRect(trackX, y + 18, (trackW * (data.values[k] ?? 0)) / 100, 16);
     g.fillStyle = PALETTE.ink;
     g.font = "600 34px 'SF Mono', 'Geist Mono', monospace";
     g.textAlign = "right";
