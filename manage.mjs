@@ -46,8 +46,11 @@ if (cmd === "scan") {
     { headers },
   );
   const rows = await res.json();
-  if (!Array.isArray(rows) || rows.length === 0) return console.log("没有 violation / suspect 评论。");
-  for (const r of rows) console.log(`#${r.id} [${r.llm_flag}] ${r.title} | ${r.nickname}: ${r.content}`);
+  if (!Array.isArray(rows) || rows.length === 0) {
+    console.log("没有 violation / suspect 评论。");
+  } else {
+    for (const r of rows) console.log(`#${r.id} [${r.llm_flag}] ${r.title} | ${r.nickname}: ${r.content}`);
+  }
 } else {
   console.log("用法:node manage.mjs <scan|list>");
 }

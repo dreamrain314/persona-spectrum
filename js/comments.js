@@ -174,12 +174,9 @@ export async function renderComments(mount, title) {
           const timer = setTimeout(() => ctrl.abort(), 6000);
           const res = await fetch(COMMENT_CONFIG.moderateUrl, {
             method: "POST",
-            // Edge Functions 网关默认校验 JWT,带项目 publishable key 即可通过
-            headers: {
-              "Content-Type": "application/json",
-              apikey: COMMENT_CONFIG.supabaseAnonKey,
-              Authorization: "Bearer " + COMMENT_CONFIG.supabaseAnonKey,
-            },
+            // 简单请求(text/plain,无自定义头):不触发 CORS 预检——Supabase 网关会吞掉
+            // 预检导致浏览器直接报错。verify_jwt 已关,无需带密钥头;函数端按 JSON 解析 body。
+            headers: { "Content-Type": "text/plain" },
             body: JSON.stringify({ content, nickname: nickEl.value.trim() || "匿名访客" }),
             signal: ctrl.signal,
           });
