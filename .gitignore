@@ -1,0 +1,6 @@
+# 本地凭据(绝不提交)
+secret.json
+
+# 系统杂项
+.DS_Store
+Thumbs.db

@@ -11,4 +11,5 @@ export const COMMENT_CONFIG = {
   enabled: true,
   supabaseUrl: "https://vocfhnxorabrmjkibyle.supabase.co",
   supabaseAnonKey: "sb_publishable_96SRS_yzuxeILFdgc7Pq7w_G3LDG0W5",
+  moderateUrl: "", // LLM 审核 Edge Function 地址(部署后填;留空 = 仅词表审核)
 };

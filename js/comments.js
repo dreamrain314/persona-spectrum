@@ -1,7 +1,9 @@
 // comments.js — 同称号评论区(Supabase,免后端)
-// 数据:sql/comments.sql 建的 public.comments 表;配置:js/data/comment-config.js
+// 数据:sql/comments.sql + comments-v2.sql;配置:js/data/comment-config.js
+// 审核:一级前端词表(常开)→ 二级 LLM(settings 表开关,Edge Function 托管 key,失败放行)
 // 安全:内容一律 textContent 渲染防注入;写入受 RLS 长度约束 + 前端 30s 节流
 import { COMMENT_CONFIG } from "./data/comment-config.js";
+import { findBannedWord } from "./data/banned-words.js";
 
 const SDK_URL = "https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm";
 const NICK_MAX = 24;
@@ -146,8 +148,45 @@ export async function renderComments(mount, title) {
       showMsg("发布太频繁了,休息 " + Math.ceil((THROTTLE_MS - (Date.now() - last)) / 1000) + " 秒再试。");
       return;
     }
+    // 一级审核:本地词表(常开,零成本)
+    const hit = findBannedWord(content);
+    if (hit) {
+      showMsg("内容包含不允许的表述,请修改后再发布。");
+      return;
+    }
     btnEl.disabled = true;
     try {
+      // 二级审核:LLM 语义审核(站长经 settings 表开关;超时/失败放行)
+      let llmOn = false;
+      if (COMMENT_CONFIG.moderateUrl) {
+        try {
+          const { data: s } = await client
+            .from("settings")
+            .select("value")
+            .eq("key", "llm_moderation")
+            .single();
+          llmOn = String(s?.value ?? "").toLowerCase() === "on";
+        } catch { llmOn = false; }
+      }
+      if (llmOn) {
+        try {
+          const ctrl = new AbortController();
+          const timer = setTimeout(() => ctrl.abort(), 6000);
+          const res = await fetch(COMMENT_CONFIG.moderateUrl, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ content, nickname: nickEl.value.trim() || "匿名访客" }),
+            signal: ctrl.signal,
+          });
+          clearTimeout(timer);
+          const j = await res.json().catch(() => ({}));
+          if (j && j.ok === false && !j.suspect) {
+            showMsg("内容未通过安全检查,请修改后再发布。");
+            return;
+          }
+          // suspect / 超时 / 报错 → 放行(站长可在后台复查)
+        } catch { /* LLM 不可用 → 放行 */ }
+      }
       const { error } = await client.from("comments").insert({
         title,
         nickname: nickEl.value.trim() || "匿名访客",
