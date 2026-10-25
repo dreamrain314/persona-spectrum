@@ -14,6 +14,7 @@
 - **规则引擎解读**(离线即时):维度 × 档位 + facet × 档位 + 维度交互洞察 + 人格称号系统,文案拒绝巴纳姆语句
 - **AI 深度解读**(BYOK):访客可选填自己的 API Key(OpenAI / DeepSeek / 智谱等 OpenAI 兼容格式),AI 解读会**引用你具体题目的作答行为**(如"你在『我常感到紧张』一题打了高分"),并支持追问对话;不填 Key 完全不影响使用
 - **分享卡片**:一键生成带人格称号与雷达图的分享图(canvas 本地绘制)
+- **同称号评论区**(可选):测出同一称号的访客互相留言,实时刷新——基于 Supabase 免费云数据库,免后端;未配置时自动隐藏
 - **隐私**:全部计算在浏览器本地完成,作答仅存 localStorage,无账号、无后端、无追踪
 
 ## 本地运行
@@ -33,6 +34,15 @@ python -m http.server 8082
 ```
 
 (ES modules 需要 http 服务,直接双击 index.html 会因 file:// 协议失败。)
+
+## 启用同称号评论区(可选,约 2 分钟)
+
+1. 在 [supabase.com](https://supabase.com) 免费建一个项目(免费档足够个人站使用)
+2. Dashboard → SQL Editor → 粘贴运行 [`sql/comments.sql`](sql/comments.sql) 全部内容(建表 + 行级安全 + 实时)
+3. Dashboard → Settings → API,复制 Project URL 与 **anon public key**,填入 `js/data/comment-config.js`,把 `enabled` 改为 `true`
+4. 提交部署
+
+说明:anon key 是设计上可公开的浏览器密钥,真正的写权限由数据库行级安全(RLS)约束(长度上限、禁改禁删)。管理评论:Supabase → Table Editor → comments,可手动删除不当内容。国内网络访问 supabase.co 偶有不稳,属正常现象。
 
 ## 部署
 

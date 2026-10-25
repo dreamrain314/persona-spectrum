@@ -11,6 +11,10 @@ const { Readable } = require("stream");
 
 const ROOT = __dirname;
 const PORT = Number(process.argv[2] ?? 8082);
+
+// 评论区本地 mock 存储(内存)
+const MOCK_COMMENTS = [];
+let MOCK_COMMENT_NEXT_ID = 1;
 const ALLOWED_HOSTS = new Set([
   "open.bigmodel.cn",
   "api.bigmodel.cn",
@@ -37,6 +41,42 @@ if (typeof fetch !== "function" || !Readable.fromWeb) {
 
 const server = http.createServer(async (req, res) => {
   const urlPath = (req.url ?? "/").split("?")[0];
+
+  // ---- 本地评论区 MOCK(预览用:数据存内存,重启即清;接入真实 Supabase 后请求直连,不经过这里) ----
+  if (urlPath === "/rest/v1/comments" && (req.method === "GET" || req.method === "POST")) {
+    if (req.method === "GET") {
+      const urlObj = new URL(req.url, "http://local");
+      const m = /^eq\.(.*)$/s.exec(urlObj.searchParams.get("title") ?? "");
+      const title = m ? m[1] : "";
+      const rows = MOCK_COMMENTS.filter((c) => c.title === title)
+        .sort((a, b) => (a.created_at < b.created_at ? 1 : -1))
+        .slice(0, 50);
+      res.writeHead(200, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify(rows));
+    }
+    const chunks = [];
+    for await (const c of req) chunks.push(c);
+    let rowsIn = [];
+    try {
+      const b = JSON.parse(Buffer.concat(chunks).toString("utf8"));
+      rowsIn = Array.isArray(b) ? b : [b];
+    } catch { /* 空体按校验失败处理 */ }
+    const ok = [];
+    for (const r of rowsIn) {
+      const title = String(r.title ?? "");
+      const nick = String(r.nickname ?? "匿名访客");
+      const content = String(r.content ?? "");
+      if (title.length < 1 || title.length > 60 || nick.length < 1 || nick.length > 24 || content.length < 1 || content.length > 500) continue;
+      ok.push({ id: MOCK_COMMENT_NEXT_ID++, title, nickname: nick, content, created_at: new Date().toISOString() });
+    }
+    if (!ok.length) {
+      res.writeHead(400, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify({ message: "violates check constraint", code: "23514" }));
+    }
+    MOCK_COMMENTS.push(...ok);
+    res.writeHead(201, { "Content-Type": "application/json" });
+    return res.end(JSON.stringify(ok));
+  }
 
   // ---- AI 代理 ----
   if (req.method === "POST" && urlPath === "/api/ai/chat/completions") {

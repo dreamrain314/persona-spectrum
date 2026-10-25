@@ -258,6 +258,7 @@ export function renderReport(app, state, h) {
       ${insightHtml(r)}
       ${sceneHtml(r)}
       ${aiHtml(state, r)}
+      <div id="comments-mount" class="comments-section" hidden></div>
 
       <div class="report-actions">
         <button class="btn" data-action="share">生成分享卡</button>
@@ -299,6 +300,9 @@ export function renderReport(app, state, h) {
     );
   });
   bindAI(app, state, r);
+  import("./comments.js").then(({ renderComments }) =>
+    renderComments(app.querySelector("#comments-mount"), r.title)
+  );
   observeReveals(app);
 }
 

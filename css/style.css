@@ -417,6 +417,32 @@ input[type="range"]::-moz-range-thumb {
 .chat-input-row input:focus { outline: none; border-color: var(--ink); }
 .ai-note { font-size: 0.76rem; color: var(--muted); line-height: 1.8; margin-top: 1rem; }
 
+/* ---------- 评论区 ---------- */
+.comments-section { margin-top: 3.5rem; border-top: 1px solid var(--hair); padding-top: 2.6rem; }
+.comments-title { font-family: var(--serif); font-size: 1.6rem; font-weight: 600; letter-spacing: -0.01em; }
+.comments-sub { color: var(--muted); font-size: 0.82rem; line-height: 1.8; margin: 0.6rem 0 1.6rem; }
+.comment-form { display: flex; flex-direction: column; gap: 0.8rem; margin-bottom: 1.4rem; }
+.comment-nick, .comment-input {
+  font: 400 0.9rem var(--sans); color: var(--ink);
+  border: 1px solid var(--hair-strong); border-radius: 8px;
+  background: var(--surface); padding: 0.7rem 0.9rem; width: 100%;
+}
+.comment-nick:focus, .comment-input:focus { outline: none; border-color: var(--ink); }
+.comment-nick { max-width: 20rem; }
+.comment-input { resize: vertical; min-height: 4.6rem; line-height: 1.7; }
+.comment-form-foot { display: flex; align-items: center; justify-content: flex-end; gap: 1.2rem; }
+.comment-count { font: 400 0.72rem var(--mono); color: var(--muted); }
+.comment-submit { padding: 0.7rem 1.6rem; }
+.comment-msg { color: var(--a-text); font-size: 0.82rem; margin: 0 0 1rem; }
+.comment-list { display: flex; flex-direction: column; }
+.comment-item { padding: 1.1rem 0; border-bottom: 1px solid var(--hair); }
+.comment-item:last-child { border-bottom: none; }
+.comment-head { display: flex; align-items: baseline; gap: 0.8rem; }
+.comment-head b { font-weight: 600; font-size: 0.9rem; }
+.comment-time { font: 400 0.7rem var(--mono); color: var(--muted); letter-spacing: 0.04em; }
+.comment-body { margin-top: 0.45rem; font-size: 0.92rem; line-height: 1.9; color: var(--ink-soft); white-space: pre-wrap; word-break: break-word; }
+.comment-empty { color: var(--muted); font-size: 0.85rem; padding: 1rem 0; }
+
 /* ---------- 报告操作区 ---------- */
 .report-actions { display: flex; gap: 1rem; flex-wrap: wrap; justify-content: center; margin: 3.5rem 0 1rem; }
 .restart-row { text-align: center; margin-top: 2.5rem; }
