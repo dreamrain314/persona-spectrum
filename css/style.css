@@ -323,6 +323,26 @@ input[type="range"]::-moz-range-thumb {
 .quiz-hint { text-align: center; color: var(--muted); font-size: 0.78rem; margin-top: 2.6rem; }
 .quiz-hint kbd { margin: 0 0.15em; }
 .qitem-enter { animation: qfade 0.4s var(--ease); }
+
+/* 移动端答题页紧凑化:题干与五个选项尽量落进一屏,减少无效滚动
+   (放在本区块末尾——CSS 同优先级下后定义的规则才不会被 .opt 基础规则覆盖) */
+@media (max-width: 720px) {
+  .quiz-wrap { padding: 1rem 0 1.2rem; }
+  .quiz-top { margin-bottom: 0.9rem; font-size: 0.72rem; gap: 0.6rem; }
+  .quiz-top > span:nth-child(2) { display: none; } /* 窄屏隐藏"预计剩余",避免挤压换行 */
+  .quiz-nav { gap: 1.1rem; }
+  .quiz-top button { white-space: nowrap; }
+  .progress-track { margin-bottom: 1rem; }
+  .quiz-lead { margin-bottom: 0.9rem; font-size: 0.8rem; }
+  .quiz-stem { min-height: 3.2em; line-height: 1.35; font-size: 1.35rem; }
+  .options { gap: 0.45rem; margin-top: 1rem; max-width: none; }
+  .opt {
+    flex-direction: row; justify-content: flex-start; align-items: center;
+    gap: 0.75rem; padding: 0.6rem 0.9rem; text-align: left;
+  }
+  .opt .opt-text { font-size: 0.88rem; }
+  .quiz-hint { display: none; } /* 手机无键盘,快捷键提示无意义 */
+}
 @keyframes qfade { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
 
 /* ---------- 过渡 ---------- */
@@ -482,9 +502,38 @@ input[type="range"]::-moz-range-thumb {
 .comment-submit { padding: 0.7rem 1.6rem; }
 .comment-msg { color: var(--a-text); font-size: 0.82rem; margin: 0 0 1rem; }
 .comment-list { display: flex; flex-direction: column; }
-.comment-item { padding: 1.1rem 0; border-bottom: 1px solid var(--hair); }
-.comment-item:last-child { border-bottom: none; }
+.comment-empty { color: var(--muted); font-size: 0.85rem; padding: 1rem 0; display: flex; flex-direction: column; align-items: flex-start; gap: 0.7rem; }
+.comment-item { padding: 1.1rem 0; }
 .comment-head { display: flex; align-items: baseline; gap: 0.8rem; }
+
+/* 回复(v3 · 无登录) */
+.comment-thread { border-bottom: 1px solid var(--hair); }
+.comment-thread:last-child { border-bottom: none; }
+.comment-mine {
+  font-size: 0.66rem; padding: 0.1em 0.45em; border-radius: 4px;
+  background: var(--surface-warm); color: var(--muted); font-weight: 500;
+}
+.comment-replyto { font-size: 0.72rem; color: var(--muted); margin-left: auto; }
+.comment-foot { margin-top: 0.45rem; }
+.comment-reply-btn {
+  background: none; border: none; padding: 0; cursor: pointer;
+  font: 400 0.78rem var(--sans); color: var(--muted);
+}
+.comment-reply-btn:hover { color: var(--ink); }
+.comment-reply {
+  padding: 0.5rem 0 0.5rem 1rem; margin: 0.4rem 0 0.4rem 0.3rem;
+  border-left: 2px solid var(--hair); border-bottom: none;
+}
+.comment-reply .comment-body { font-size: 0.9rem; }
+.reply-box { padding: 0.4rem 0 0.9rem; }
+.reply-box textarea {
+  width: 100%; font: 400 0.9rem var(--sans); color: var(--ink);
+  border: 1px solid var(--hair-strong); border-radius: 8px;
+  padding: 0.6rem 0.8rem; background: var(--surface); resize: vertical;
+}
+.reply-box textarea:focus { outline: none; border-color: var(--ink); }
+.reply-foot { display: flex; align-items: center; gap: 0.8rem; margin-top: 0.5rem; }
+.reply-foot .btn { padding: 0.45rem 1.1rem; font-size: 0.85rem; }
 .comment-head b { font-weight: 600; font-size: 0.9rem; }
 .comment-time { font: 400 0.7rem var(--mono); color: var(--muted); letter-spacing: 0.04em; }
 .comment-body { margin-top: 0.45rem; font-size: 0.92rem; line-height: 1.9; color: var(--ink-soft); white-space: pre-wrap; word-break: break-word; }

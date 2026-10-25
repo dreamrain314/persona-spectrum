@@ -10,6 +10,13 @@ HANDOFF.md
 # 本地测试/截图工具产物
 shots/
 *.local.md
+verify*.js
+fix-verify.js
+shots-run.js
+solve-answers.js
+generate-test.js
+fallback-test.js
+diag-cloud.js
 
 # 系统杂项
 .DS_Store
