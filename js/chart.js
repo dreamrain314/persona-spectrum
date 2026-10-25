@@ -48,7 +48,8 @@ export function renderRadar(container, opts) {
     : "";
 
   const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-  svg.setAttribute("viewBox", `0 0 ${size} ${size}`);
+  // 左右各留 30px 余量:左右轴标签为 start/end 锚定,20px 字号下会超出 460 视口
+  svg.setAttribute("viewBox", "-30 0 530 460");
   svg.setAttribute("class", "radar" + (opts.animate === false ? "" : " radar-enter"));
   svg.innerHTML = `
     <g class="radar-grid">${ringEls}${axisEls}</g>
