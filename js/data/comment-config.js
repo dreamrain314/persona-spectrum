@@ -8,7 +8,7 @@
 // 未配置(enabled=false)时,报告页不显示评论区。
 
 export const COMMENT_CONFIG = {
-  enabled: false,
-  supabaseUrl: "",      // 例:https://xxxxxxxx.supabase.co
-  supabaseAnonKey: "",  // anon public key
+  enabled: true,
+  supabaseUrl: "https://vocfhnxorabrmjkibyle.supabase.co",
+  supabaseAnonKey: "sb_publishable_96SRS_yzuxeILFdgc7Pq7w_G3LDG0W5",
 };
