@@ -6,7 +6,7 @@
 // 凭据:同目录 secret.json(复制 secret.example.json 填写;该文件已被 .gitignore 排除)
 //   {
 //     "supabaseUrl": "https://xxxx.supabase.co",
-//     "serviceKey":  "sb_secret_... 或 service_role key(仅本地保存,绝不提交/不进前端)",
+//     "readKey":     "publishable key(评论对匿名可读,list 用;非 secret)",
 //     "moderateUrl": "https://xxxx.supabase.co/functions/v1/moderate",
 //     "adminToken":  "你设置在 Edge Function Secrets 里的 ADMIN_TOKEN"
 //   }
@@ -25,7 +25,7 @@ try {
 }
 
 const cmd = process.argv[2] ?? "";
-const headers = { "Content-Type": "application/json", apikey: secret.serviceKey, Authorization: "Bearer " + secret.serviceKey };
+const headers = { "Content-Type": "application/json", apikey: secret.readKey, Authorization: "Bearer " + secret.readKey };
 
 if (cmd === "scan") {
   const res = await fetch(secret.moderateUrl, {

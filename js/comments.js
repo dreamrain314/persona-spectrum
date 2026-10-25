@@ -174,17 +174,22 @@ export async function renderComments(mount, title) {
           const timer = setTimeout(() => ctrl.abort(), 6000);
           const res = await fetch(COMMENT_CONFIG.moderateUrl, {
             method: "POST",
-            headers: { "Content-Type": "application/json" },
+            // Edge Functions 网关默认校验 JWT,带项目 publishable key 即可通过
+            headers: {
+              "Content-Type": "application/json",
+              apikey: COMMENT_CONFIG.supabaseAnonKey,
+              Authorization: "Bearer " + COMMENT_CONFIG.supabaseAnonKey,
+            },
             body: JSON.stringify({ content, nickname: nickEl.value.trim() || "匿名访客" }),
             signal: ctrl.signal,
           });
           clearTimeout(timer);
           const j = await res.json().catch(() => ({}));
-          if (j && j.ok === false && !j.suspect) {
+          if (j && j.ok === false) {
             showMsg("内容未通过安全检查,请修改后再发布。");
             return;
           }
-          // suspect / 超时 / 报错 → 放行(站长可在后台复查)
+          // 超时 / 报错 / LLM 不可用 → 放行(站长可全盘扫描复查)
         } catch { /* LLM 不可用 → 放行 */ }
       }
       const { error } = await client.from("comments").insert({
