@@ -83,7 +83,7 @@ function historyHtml(hist) {
     const mode = e.mode === "short" ? "快速版" : "完整版";
     const pcts = e.percentiles ?? {};
     const bars = ORDER.map((k) =>
-      `<span class="hist-bar" title="${DOMAINS[k].name} ${pcts[k] ?? "—"}%ile"><i style="width:${Math.max(4, Math.min(100, pcts[k] ?? 0))}%;background:var(--${k.toLowerCase()}-fill)"></i></span>`
+      `<span class="hist-bar" title="${DOMAINS[k].name}:高于参考人群 ${pcts[k] ?? "—"}% 的人"><i style="width:${Math.max(4, Math.min(100, pcts[k] ?? 0))}%;background:var(--${k.toLowerCase()}-fill)"></i></span>`
     ).join("");
     const view = e.snapshot
       ? `<button class="btn btn-ghost hist-view" data-action="history-view" data-history-view="${i}">查看完整报告 →</button>`
@@ -259,6 +259,7 @@ export function renderReport(app, state, h) {
       </div>
 
       ${qualityHtml(r)}
+      ${pctExplainerHtml(r)}
 
       <div class="radar-section">
         <div class="card reveal" style="--i:2">
@@ -270,13 +271,14 @@ export function renderReport(app, state, h) {
           </div>
         </div>
         <div class="reveal" style="--i:3">
+          <p class="unit-note">五维速览 · 数字 = 你高于百分之多少的人</p>
           <div class="mini-list">
             ${ORDER.map(
               (k) => `
-            <div class="mini-row">
+            <div class="mini-row" title="${DOMAINS[k].name}:高于参考人群 ${r.domainPcts[k] ?? "—"}% 的人">
               <span class="tag tag-${k}">${DOMAINS[k].name}</span>
               <span class="mini-grade">${GRADE_LABELS[r.grades[k]] ?? "—"}</span>
-              <span class="mini-pct">${r.domainPcts[k] ?? "—"}<i>%ile</i></span>
+              <span class="mini-pct">${r.domainPcts[k] ?? "—"}<i>%</i></span>
             </div>`
             ).join("")}
           </div>
@@ -339,6 +341,40 @@ export function renderReport(app, state, h) {
   observeReveals(app);
 }
 
+/**
+ * 「数字怎么读」说明块。
+ * 百分位是整份报告的统一度量,这里用受访者自己落差最大的那个维度做例子
+ * 讲一次;其余位置就不必重复标注单位,避免满屏 %ile / P 缩写。
+ */
+function pctExplainerHtml(r) {
+  const ex = ORDER.reduce(
+    (best, k) =>
+      r.domainPcts[k] == null
+        ? best
+        : best == null || Math.abs(r.domainPcts[k] - 50) > Math.abs(r.domainPcts[best] - 50)
+          ? k
+          : best,
+    null
+  );
+  const key = ex ?? "O";
+  const pct = r.domainPcts[key] ?? 50;
+  return `
+    <div class="pct-explainer reveal">
+      <span class="eyebrow">数字怎么读 · 百分位</span>
+      <p>报告里所有数字都是<b>百分位</b>:你超过了参考人群里百分之多少的人。它不是答对率,也不是百分制成绩——50 代表人群的正中间,不是及格线。</p>
+      <div class="pct-demo">
+        <p class="pct-demo-line">以你的<b>${DOMAINS[key].name}</b>为例<span class="pct-demo-num">${pct}</span></p>
+        <div class="pct-bar" role="img" aria-label="${DOMAINS[key].name}百分位 ${pct},每 100 人里约有 ${pct} 人低于你">
+          <span class="pct-bar-fill" style="--sx:${pct / 100}"></span>
+          <span class="pct-bar-mid"></span>
+          <span class="pct-bar-cursor" style="--sx:${pct / 100}"></span>
+        </div>
+        <div class="pct-bar-labels"><span>最低</span><span>50 · 人群中间</span><span>最高</span></div>
+        <p class="pct-demo-note">意思是:每 100 个参照样本中,大约 <b>${pct}</b> 人在这项上得分比你低,<b>${100 - pct}</b> 人比你高。</p>
+      </div>
+    </div>`;
+}
+
 function qualityHtml(r) {
   const q = r.quality;
   if (q.confidence === "high") return "";
@@ -368,8 +404,8 @@ function gapHtml(r, state) {
       const pct = r.domainPcts[k];
       const self = state.selfRatings[k];
       return g > 0
-        ? `<b>${DOMAINS[k].name}</b>:自评 ${self},实测 ${pct}。你低估了自己的这一面——行为证据比你自己的印象走得更远。`
-        : `<b>${DOMAINS[k].name}</b>:自评 ${self},实测 ${pct}。你高估了自己的这一面——你希望的样子和题目捕捉到的样子之间有距离。`;
+        ? `<b>${DOMAINS[k].name}</b>:你把自己放在 ${self},实测高于 ${pct}% 的人。你低估了自己的这一面——行为证据比你自己的印象走得更远。`
+        : `<b>${DOMAINS[k].name}</b>:你把自己放在 ${self},实测只高于 ${pct}% 的人。你高估了自己的这一面——你希望的样子和题目捕捉到的样子之间有距离。`;
     })
     .join("<br/>");
   return `<div class="gap-callout"><span class="eyebrow" style="display:block;margin-bottom:0.5rem">你以为的 vs 测出来的</span>${lines}</div>`;
@@ -383,7 +419,7 @@ function domainBlockHtml(k, r, di) {
       const fid = `${k}${i + 1}`;
       const pct = r.facetPcts[fid];
       return `
-      <div class="facet-row">
+      <div class="facet-row" title="${name}:高于参考人群 ${pct ?? "—"}% 的人">
         <span class="facet-name">${name}</span>
         <span class="facet-track"><span class="facet-fill d-${k}" style="--sx:${(pct ?? 0) / 100}"></span><span class="facet-mid"></span></span>
         <span class="facet-val">${pct ?? "—"}<i>%</i></span>
@@ -397,7 +433,7 @@ function domainBlockHtml(k, r, di) {
       return `
       <div class="acc-item">
         <button class="acc-head" type="button">
-          <span>${name} · ${GRADE_LABELS[g] ?? "—"}(P${r.facetPcts[fid] ?? "—"})</span>
+          <span>${name} · ${GRADE_LABELS[g] ?? "—"} · 高于 ${r.facetPcts[fid] ?? "—"}% 的人</span>
           <span class="acc-icon">+</span>
         </button>
         <div class="acc-body">${facetText(k, i, g)}</div>
@@ -410,7 +446,7 @@ function domainBlockHtml(k, r, di) {
       <div class="domain-head">
         <span class="tag tag-${k}">${DOMAINS[k].name}</span>
         <span class="dom-en">${DOMAINS[k].en} · ${DOMAINS[k].facets.join(" / ")}</span>
-        <span class="domain-pct">${pct ?? "—"}<i>%ile</i></span>
+        <span class="domain-pct" title="${pct == null ? "无常模数据" : "每 100 个参照样本里约有 " + pct + " 人低于你"}"><i class="pct-pre">高于</i>${pct ?? "—"}<i>% 的人</i></span>
       </div>
       <div class="domain-bar">
         <span class="fill" style="background:var(--${k.toLowerCase()}-text);--sx:${(pct ?? 0) / 100}"></span>

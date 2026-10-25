@@ -157,10 +157,13 @@ async function byokStreamChat(messages, onDelta, onThinking) {
  */
 export function buildInterpretationPrompt(state, results) {
   const dom = Object.keys(results.domainPcts)
-    .map((k) => `${DOMAIN_LABEL[k]}:${results.domainScores[k]} 分 / 百分位 ${results.domainPcts[k]}(${gradeCn(results.grades[k])})`)
+    .map((k) => {
+      const p = results.domainPcts[k];
+      return `${DOMAIN_LABEL[k]}:均分 ${results.domainScores[k]}/5,百分位 ${p}——高于参考人群 ${p}% 的人(${gradeCn(results.grades[k])})`;
+    })
     .join("\n");
   const facets = Object.keys(results.facetPcts)
-    .map((fid) => `${FACET_LABEL[fid] ?? fid}:${results.facetScores[fid]} / P${results.facetPcts[fid]}`)
+    .map((fid) => `${FACET_LABEL[fid] ?? fid}:均分 ${results.facetScores[fid]}/5,百分位 ${results.facetPcts[fid]}`)
     .join("、");
 
   const evidence = results.evidence
@@ -205,7 +208,8 @@ ${qualityText}
 4. 若自评与实测有明显落差,单独用一段讨论这种"自我认知偏差"的可能含义。
 5. 使用"你"称呼读者;不使用临床诊断词汇(如"抑郁倾向""焦虑症"),必要时提示这是自我认识参考而非诊断。
 6. 输出 markdown,结构:## 一段总评(120字内)、## 逐维度解读(五段,每段 80-150 字)、## 你的盲点(2-3 条)、## 给你的三个具体建议(可执行、贴合数据)。
-7. 全文中文,总长 900-1400 字,克制、具体、有洞察,像一位懂心理学的老朋友,不像营销文案。`;
+7. 提到分数时用大白话,例如「你的外向性高于 78% 的人」,不要写「P78」「百分位 78」这类术语缩写;也不要把百分位说成百分制成绩或答对率。
+8. 全文中文,总长 900-1400 字,克制、具体、有洞察,像一位懂心理学的老朋友,不像营销文案。`;
 }
 
 const DOMAIN_LABEL = { O: "开放性", C: "尽责性", E: "外向性", A: "宜人性", N: "神经质" };
@@ -222,10 +226,10 @@ function gradeCn(g) { return GRADE_CN[g] ?? "—"; }
 /** 追问对话的系统提示(携带结果上下文的压缩版) */
 export function buildChatSystemPrompt(results) {
   const dom = Object.keys(results.domainPcts)
-    .map((k) => `${DOMAIN_LABEL[k]} P${results.domainPcts[k]}`)
+    .map((k) => `${DOMAIN_LABEL[k]} 百分位 ${results.domainPcts[k]}`)
     .join("、");
   const facets = Object.keys(results.facetPcts)
-    .map((fid) => `${FACET_LABEL[fid] ?? fid} P${results.facetPcts[fid]}`)
+    .map((fid) => `${FACET_LABEL[fid] ?? fid} 百分位 ${results.facetPcts[fid]}`)
     .join("、");
-  return `你是用户的性格解读顾问,用户刚完成大五人格测试(BFI-2)。其结果:维度百分位——${dom};侧面百分位——${facets}。人格称号「${results.title}」。回答用户追问时:基于这些数据,具体、诚实、给 trade-off 而非空泛安慰;不使用临床诊断语言;中文回答,每次 300 字以内;数据未覆盖的话题(如童年经历)要说明测试数据无法回答。`;
+  return `你是用户的性格解读顾问,用户刚完成大五人格测试(BFI-2)。百分位的含义是「高于参考人群百分之多少的人」。结果:维度——${dom};侧面——${facets}。人格称号「${results.title}」。回答用户追问时:基于这些数据,具体、诚实、给 trade-off 而非空泛安慰;不使用临床诊断语言;中文回答,每次 300 字以内;数据未覆盖的话题(如童年经历)要说明测试数据无法回答。`;
 }

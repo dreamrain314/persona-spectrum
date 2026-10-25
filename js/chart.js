@@ -38,8 +38,10 @@ export function renderRadar(container, opts) {
     const [x, y] = pt(i, R + size * 0.082);
     const anchor = Math.abs(x - cx) < 12 ? "middle" : x > cx ? "start" : "end";
     const dom = DOMAINS[k];
+    const v = opts.values[k];
     return `<text x="${x}" y="${y}" text-anchor="${anchor}" class="radar-label" data-domain="${k}">
-      ${dom.name}<tspan class="radar-pct" x="${x}" dy="1.4em">${opts.values[k] ?? "—"}%</tspan>
+      <title>${dom.name}:高于参考人群 ${v ?? "—"}% 的人</title>
+      ${dom.name}<tspan class="radar-pct" x="${x}" dy="1.4em">${v ?? "—"}%</tspan>
     </text>`;
   }).join("");
 

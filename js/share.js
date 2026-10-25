@@ -71,6 +71,13 @@ export function drawShareCard(data) {
   const trackX = 722, trackW = 924 - trackX;
   const rowH = 64;
   const rowsTop = midCy - ((ORDER.length - 1) * rowH) / 2 - 18;
+
+  // 单位说明:百分位对第一次接触的人不直观,这里一次性写清怎么读这几个数字
+  g.fillStyle = PALETTE.muted;
+  g.font = "500 22px 'SF Pro Display', 'PingFang SC', sans-serif";
+  g.textAlign = "left";
+  g.fillText("五维速览 · 数字 = 高于百分之多少的人", barX, rowsTop - 40);
+
   ORDER.forEach((k, i) => {
     const y = rowsTop + i * rowH;
     g.fillStyle = PALETTE.muted;
