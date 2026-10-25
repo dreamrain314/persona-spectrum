@@ -1,0 +1,25 @@
+name: supabase-keepalive
+
+# 评论区所用 Supabase 免费项目闲置约 7 天会被暂停。
+# 每 3 天发一次只读 REST 请求保持活跃(比赛评审期 11/2-11/9 必须在线)。
+# publishable key 从 js/data/comment-config.js 读取,不在本文件重复存放。
+
+on:
+  schedule:
+    - cron: "0 3 */3 * *"   # UTC 03:00 = 北京时间 11:00,每 3 天一次
+  workflow_dispatch:        # 允许手动触发
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Ping Supabase REST(只读)
+        run: |
+          KEY=$(grep -o 'supabaseAnonKey: *"[^"]*"' js/data/comment-config.js | cut -d'"' -f2)
+          if [ -z "$KEY" ]; then echo "::error::未找到 supabaseAnonKey"; exit 1; fi
+          CODE=$(curl -s -o /dev/null -w "%{http_code}" --max-time 30 \
+            "https://vocfhnxorabrmjkibyle.supabase.co/rest/v1/comments?select=id&limit=1" \
+            -H "apikey: $KEY" -H "Authorization: Bearer $KEY")
+          echo "HTTP $CODE"
+          if [ "$CODE" != "200" ]; then echo "::error::Supabase ping 返回 $CODE"; exit 1; fi

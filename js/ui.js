@@ -423,8 +423,16 @@ function sceneHtml(r) {
 
 /* ---------- AI 面板 ---------- */
 
+// 云模式下给解读 prompt 补一条系统消息(云 API 要求 messages[0] 为 system)
+const AI_SYS_HINT = "你是人格光谱的心理测量学解读顾问,严格遵循用户消息中的写作要求,用中文输出。";
+
+function esc(s) {
+  return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+}
+
 function aiHtml(state, r) {
   const cfg = AI.loadConfig();
+  const cloudOn = AI.cloudConfigured();
   return `
     <div class="ai-section reveal">
       <div class="ai-head-row">
@@ -434,10 +442,14 @@ function aiHtml(state, r) {
         <p style="color:var(--muted);font-size:0.9rem;line-height:1.9">
           上面的报告由内置规则引擎即时生成,离线可用。而 AI 深度解读会通读你的五维与 15 个侧面分数、<b>你具体题目的作答(包括作答速度)</b>、自评与实测的落差,写一段真正只属于你的长解读,并支持继续追问("我适合什么方向的工作?")。
         </p>
+        ${cloudOn ? `
+        <p style="color:var(--muted);font-size:0.9rem;line-height:1.9">
+          本页已接入 <b>WorkBuddy 云服务</b>:免密钥直接生成,无需注册、无需填写任何 Key。解读请求经云服务处理,你的作答数据仅用于生成本次解读。也可以展开下方「使用我自己的 API Key」,切换到你自己的大模型服务商。
+        </p>` : `
         <p style="color:var(--muted);font-size:0.9rem;line-height:1.9">
           它需要你自己的大模型 API Key(OpenAI 兼容格式,智谱 / DeepSeek / OpenAI 均可)。Key 只保存在本浏览器,请求从你的浏览器直接发往你选的服务商——本站没有后端,也无法看到它。不填也完全不影响使用其他全部功能。
-        </p>
-        <div id="ai-config-area">${cfg ? readyRowHtml(cfg) : configFormHtml(cfg)}</div>
+        </p>`}
+        <div id="ai-config-area">${aiConfigAreaHtml(cfg, cloudOn)}</div>
         <div id="ai-output" class="ai-output" hidden></div>
         <div id="ai-chat" class="ai-chat" hidden>
           <div class="ai-chat-log" id="chat-log"></div>
@@ -446,8 +458,36 @@ function aiHtml(state, r) {
             <button class="btn" id="chat-send">发送</button>
           </div>
         </div>
-        <p class="ai-note">隐私:Key 与对话均不离开本浏览器;智谱接口不允许浏览器直连,本页会在直连被拦时自动改走同源代理——代理仅在以 <b>node server.js</b> 启动本项目时存在,纯静态托管下请改用支持直连的服务商(DeepSeek / OpenAI)或自建中转。AI 解读内容由模型生成,仅供自我认识参考。</p>
+        <p class="ai-note">${aiNoteHtml(cloudOn)}</p>
       </div>
+    </div>`;
+}
+
+function aiNoteHtml(cloudOn) {
+  const base = "AI 解读内容由模型生成,仅供自我认识参考,不构成临床诊断。";
+  if (cloudOn) {
+    return "隐私:作答仅存于本浏览器。免密钥模式下,解读请求(含你的分数与题目作答)经 WorkBuddy 云服务处理,用于生成本次回复;自带 Key 模式下,Key 与对话均不离开本浏览器,请求直达你选的服务商。" + base;
+  }
+  return "隐私:Key 与对话均不离开本浏览器;智谱接口不允许浏览器直连,本页会在直连被拦时自动改走同源代理——代理仅在以 <b>node server.js</b> 启动本项目时存在,纯静态托管下请改用支持直连的服务商(DeepSeek / OpenAI)或自建中转。" + base;
+}
+
+function aiConfigAreaHtml(cfg, cloudOn) {
+  if (cfg) return readyRowHtml(cfg);
+  if (cloudOn) return cloudReadyHtml();
+  return configFormHtml(null);
+}
+
+function cloudReadyHtml() {
+  return `
+    <div id="ai-cloud-ready">
+      <div style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin:1.2rem 0">
+        <button class="btn" id="ai-generate-cloud" disabled>正在连接云服务…</button>
+        <span id="ai-cloud-status" style="font-size:0.85rem;color:var(--muted)">正在连接…</span>
+      </div>
+      <details class="ai-byok-details">
+        <summary>使用我自己的 API Key(高级)</summary>
+        ${configFormHtml(null)}
+      </details>
     </div>`;
 }
 
@@ -482,6 +522,7 @@ function readyRowHtml(cfg) {
     <div class="ai-ready-row" style="display:flex;align-items:center;gap:1rem;flex-wrap:wrap;margin:1.2rem 0">
       <span style="font-size:0.85rem;color:var(--muted)">当前:${label} · ${cfg.model} · Key ${masked}</span>
       <button class="btn btn-ghost" id="ai-edit" style="padding:0.6rem 1.2rem">修改配置</button>
+      <button class="btn btn-ghost" id="ai-use-cloud" style="padding:0.6rem 1.2rem" hidden>改用免密钥 AI</button>
       <button class="btn" id="ai-generate">生成 AI 深度解读 →</button>
     </div>`;
 }
@@ -494,8 +535,46 @@ function bindAI(app, state, r) {
   const chatInput = app.querySelector("#chat-input");
   let chatHistory = [];
 
-  const renderForm = () => {
-    configArea.innerHTML = configFormHtml(AI.loadConfig());
+  // 生成流程:BYOK 就绪行与云就绪行共用
+  const runGenerate = async (btn) => {
+    const btnLabel = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = "正在生成…";
+    output.hidden = false;
+    output.innerHTML = `<span class="ai-cursor"></span>`;
+    let lastFull = "";
+    let proxyNote = "";
+    const refresh = () => {
+      output.innerHTML =
+        (proxyNote ? `<p class="ai-thinking">${proxyNote}</p>` : "") +
+        (lastFull ? tinyMd(lastFull) + `<span class="ai-cursor"></span>` : `<p class="ai-thinking">模型思考中…深度解读的思考阶段通常需要一到三分钟,请稍候<span class="ai-cursor"></span></p>`);
+    };
+    try {
+      const prompt = AI.buildInterpretationPrompt(state, r);
+      await AI.streamChat(
+        [{ role: "system", content: AI_SYS_HINT }, { role: "user", content: prompt }],
+        (_d, full) => { lastFull = full; refresh(); },
+        (_chunk, done) => { if (done) proxyNote = "(浏览器直连被跨域拦截,已自动经本地代理连接)"; else refresh(); }
+      );
+      output.innerHTML = (proxyNote ? `<p class="ai-thinking">${proxyNote}</p>` : "") + tinyMd(lastFull);
+      chatBox.hidden = false;
+    } catch (e) {
+      const usingCloud = !AI.loadConfig();
+      output.innerHTML =
+        `<p style="color:var(--a-text)">生成失败:${esc(e.message ?? e)}</p>` +
+        (usingCloud
+          ? `<p style="color:var(--muted);font-size:0.85rem">免密钥模式由 WorkBuddy 云服务提供;若持续失败,可展开「使用我自己的 API Key」切换到你自己的服务商,或稍后重试。</p>`
+          : `<p style="color:var(--muted);font-size:0.85rem">常见原因:Key 无效 / 模型名不对 / 该服务商不允许浏览器跨域调用(CORS)。可点"修改配置"更换服务商或填写自建中转地址。</p>`);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = btnLabel;
+    }
+  };
+
+  const renderForm = (note) => {
+    configArea.innerHTML =
+      (note ? `<p id="ai-fallback-note" style="font-size:0.85rem;color:var(--muted);margin:1rem 0;line-height:1.8">${note}</p>` : "") +
+      configFormHtml(AI.loadConfig());
     const presetSel = configArea.querySelector("#ai-preset");
     const baseInp = configArea.querySelector("#ai-base");
     const modelInp = configArea.querySelector("#ai-model");
@@ -525,37 +604,35 @@ function bindAI(app, state, r) {
     });
   };
 
+  // 云服务探测:成功即接通按钮;失败且访客没有自带 Key 时显式回退 BYOK 表单
+  const wireCloud = () => {
+    const btn = configArea.querySelector("#ai-generate-cloud");
+    if (!btn) return;
+    const status = configArea.querySelector("#ai-cloud-status");
+    AI.cloudStatus().then((st) => {
+      if (st.ok) {
+        btn.disabled = false;
+        btn.textContent = "生成 AI 深度解读(免密钥)→";
+        if (status) status.textContent = `已连接 · 模型:${st.modelName}`;
+        btn.addEventListener("click", () => runGenerate(btn));
+      } else {
+        btn.disabled = true;
+        btn.textContent = "云服务不可用";
+        if (status) status.textContent = st.reason;
+        if (!AI.loadConfig()) {
+          renderForm(`云服务当前不可用(${esc(st.reason)}),已回退到自带 Key 模式——填写自己的 API Key 即可使用。`);
+        }
+      }
+    });
+  };
+
   const bindReady = (cfg) => {
     configArea.querySelector("#ai-edit")?.addEventListener("click", renderForm);
-    configArea.querySelector("#ai-generate")?.addEventListener("click", async () => {
-      const btn = configArea.querySelector("#ai-generate");
-      btn.disabled = true;
-      btn.textContent = "正在生成…";
-      output.hidden = false;
-      output.innerHTML = `<span class="ai-cursor"></span>`;
-      let lastFull = "";
-      let proxyNote = "";
-      const refresh = () => {
-        output.innerHTML =
-          (proxyNote ? `<p class="ai-thinking">${proxyNote}</p>` : "") +
-          (lastFull ? tinyMd(lastFull) + `<span class="ai-cursor"></span>` : `<p class="ai-thinking">模型思考中…深度解读的思考阶段通常需要一到三分钟,请稍候<span class="ai-cursor"></span></p>`);
-      };
-      try {
-        const prompt = AI.buildInterpretationPrompt(state, r);
-        await AI.streamChat(
-          [{ role: "user", content: prompt }],
-          (_d, full) => { lastFull = full; refresh(); },
-          (_chunk, done) => { if (done) proxyNote = "(浏览器直连被跨域拦截,已自动经本地代理连接)"; else refresh(); }
-        );
-        output.innerHTML = (proxyNote ? `<p class="ai-thinking">${proxyNote}</p>` : "") + tinyMd(lastFull);
-        chatBox.hidden = false;
-      } catch (e) {
-        output.innerHTML = `<p style="color:var(--a-text)">生成失败:${String(e.message ?? e)}</p>
-          <p style="color:var(--muted);font-size:0.85rem">常见原因:Key 无效 / 模型名不对 / 该服务商不允许浏览器跨域调用(CORS)。可点"修改配置"更换服务商或填写自建中转地址。</p>`;
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "生成 AI 深度解读 →";
-      }
+    configArea.querySelector("#ai-generate")?.addEventListener("click", (e) => runGenerate(e.currentTarget));
+    configArea.querySelector("#ai-use-cloud")?.addEventListener("click", () => {
+      AI.clearConfig();
+      configArea.innerHTML = cloudReadyHtml();
+      wireCloud();
     });
   };
 
@@ -593,7 +670,7 @@ function bindAI(app, state, r) {
       botEl.innerHTML = tinyMd(full);
       chatHistory.push({ role: "user", content: text }, { role: "assistant", content: full });
     } catch (e) {
-      botEl.innerHTML = `<span style="color:var(--a-text)">请求失败:${String(e.message ?? e)}</span>`;
+      botEl.innerHTML = `<span style="color:var(--a-text)">请求失败:${esc(e.message ?? e)}</span>`;
     }
   };
 
@@ -603,8 +680,19 @@ function bindAI(app, state, r) {
   });
 
   const cfg = AI.loadConfig();
-  if (cfg) bindReady(cfg);
-  else renderForm();
+  if (cfg) {
+    bindReady(cfg);
+    if (AI.cloudConfigured()) {
+      // 探测成功才露出"改用免密钥 AI"(云不可用时不该诱导访客切过去)
+      AI.cloudStatus().then((st) => {
+        if (st.ok) configArea.querySelector("#ai-use-cloud")?.removeAttribute("hidden");
+      });
+    }
+  } else if (AI.cloudConfigured()) {
+    wireCloud();
+  } else {
+    renderForm();
+  }
 }
 
 /** 极简 markdown 渲染(先转义再生成标签,防注入) */

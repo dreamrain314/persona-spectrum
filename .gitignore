@@ -1,6 +1,16 @@
 # 本地凭据(绝不提交)
 secret.json
 
+# 交接文档(本地阅读,不入公开仓库)
+HANDOFF.md
+
+# 多 agent 共存互斥锁(本地瞬时状态)
+.agent-lock.json
+
+# 本地测试/截图工具产物
+shots/
+*.local.md
+
 # 系统杂项
 .DS_Store
 Thumbs.db

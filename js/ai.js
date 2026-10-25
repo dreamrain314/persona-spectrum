@@ -1,5 +1,11 @@
-// ai.js — BYOK(自带 Key)AI 深度解读层
-// 访客可选配置 OpenAI 兼容接口;Key 仅存于 localStorage,不发送到任何第三方(含本站后端,本站无后端)。
+// ai.js — AI 深度解读层(双模式路由)
+// 模式 A「云服务」:访客无需任何 Key,经 WorkBuddy 云服务调用大模型(js/cloud.js)。
+// 模式 B「BYOK」:访客自带 OpenAI 兼容 Key,Key 仅存于 localStorage,
+//                请求从浏览器直接发往其选的服务商(本站无后端,也看不到 Key)。
+// 路由规则:访客保存过自己的 Key → 尊重显式选择走 BYOK;否则优先云服务;
+//          两者都不可用时给出可操作的错误提示,不静默失败。
+
+import * as Cloud from "./cloud.js";
 
 export const PRESETS = {
   zhipu:   { label: "智谱 BigModel(浏览器直连被 CORS 拦,需本地模式)", base: "https://open.bigmodel.cn/api/paas/v4", model: "glm-5.3-flash" },
@@ -22,6 +28,20 @@ export function saveConfig(cfg) {
   localStorage.setItem(CFG_KEY, JSON.stringify(cfg));
 }
 
+export function clearConfig() {
+  localStorage.removeItem(CFG_KEY);
+}
+
+/** 配置层是否启用了云服务(同步;不代表此刻一定可用) */
+export function cloudConfigured() {
+  return Cloud.isConfigured();
+}
+
+/** 探测云服务实际可用性(幂等,失败原因带 sticky 标记) */
+export function cloudStatus() {
+  return Cloud.ensureReady();
+}
+
 class ApiError extends Error {
   constructor(status, detail) {
     super(`接口返回 ${status}:${detail.slice(0, 200)}`);
@@ -30,15 +50,31 @@ class ApiError extends Error {
 }
 
 /**
- * 流式对话(OpenAI 兼容 /chat/completions)。
- * 直连被 CORS 拦截时自动回落到本地代理(node server.js 的 /api/ai)。
+ * 流式对话(双模式路由)。
+ * 访客有自带 Key 配置 → BYOK;否则 → 云服务(免密钥);都不可用 → 可操作的错误提示。
  * 推理模型(如 GLM-5.3-Flash)的思考增量通过 onThinking 回调,不计入正文。
  * @param {Array<{role:string,content:string}>} messages
  * @param {Function} onDelta(delta, full) 正文增量
  * @param {Function} [onThinking] 思考中信号(收到 reasoning 增量时调用)
+ * @param {AbortSignal} [signal] 中止信号(云模式生效)
  * @returns {Promise<string>} 完整正文
  */
-export async function streamChat(messages, onDelta, onThinking) {
+export async function streamChat(messages, onDelta, onThinking, signal) {
+  const cfg = loadConfig();
+  if (cfg?.key && cfg.base) {
+    return byokStreamChat(messages, onDelta, onThinking);
+  }
+  if (Cloud.isConfigured()) {
+    const st = await Cloud.ensureReady();
+    if (st.ok) return Cloud.streamChat(messages, onDelta, onThinking, signal);
+    throw new Error(
+      `AI 解读当前不可用:${st.reason}。可刷新重试,或在下方填写自己的 API Key(OpenAI 兼容)后使用。`
+    );
+  }
+  throw new Error("请先填写并保存 API 配置");
+}
+
+async function byokStreamChat(messages, onDelta, onThinking) {
   const cfg = loadConfig();
   if (!cfg?.key || !cfg.base) throw new Error("请先填写并保存 API 配置");
 

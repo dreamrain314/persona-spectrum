@@ -416,6 +416,17 @@ input[type="range"]::-moz-range-thumb {
 .chat-input-row input { flex: 1; font: 400 0.9rem var(--sans); border: 1px solid var(--hair-strong); border-radius: 8px; padding: 0.75rem 1rem; background: var(--surface); }
 .chat-input-row input:focus { outline: none; border-color: var(--ink); }
 .ai-note { font-size: 0.76rem; color: var(--muted); line-height: 1.8; margin-top: 1rem; }
+.ai-byok-details { margin: 0.4rem 0 0.2rem; }
+.ai-byok-details summary {
+  cursor: pointer; font-size: 0.85rem; color: var(--muted);
+  list-style: none; display: inline-flex; align-items: center; gap: 0.4rem;
+  padding: 0.3rem 0; user-select: none;
+}
+.ai-byok-details summary::-webkit-details-marker { display: none; }
+.ai-byok-details summary::before { content: "▸"; font-size: 0.75rem; transition: transform 0.15s; }
+.ai-byok-details[open] summary::before { transform: rotate(90deg); }
+.ai-byok-details summary:hover { color: var(--ink); }
+.ai-byok-details .ai-config { margin-top: 0.8rem; }
 
 /* ---------- 评论区 ---------- */
 .comments-section { margin-top: 3.5rem; border-top: 1px solid var(--hair); padding-top: 2.6rem; }
