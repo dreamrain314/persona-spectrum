@@ -122,13 +122,13 @@ export function pickEvidence(items, answers) {
 
 /** 维度摘要段(规则引擎文本) */
 export function domainSummary(domain, grade) {
-  return COPY.domains[domain].grades[grade]?.text ?? "";
+  return COPY.domains[domain].grades[grade] ?? "";
 }
 
 /** 侧面解读段 */
 export function facetText(domain, facetIdx, grade) {
   const fid = `${domain}${facetIdx + 1}`;
-  return COPY.facets[fid].grades[grade]?.text ?? "";
+  return COPY.facets[fid].grades[grade] ?? "";
 }
 
 export function gradeLabel(grade) {

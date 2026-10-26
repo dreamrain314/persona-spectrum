@@ -7,6 +7,7 @@ import { domainSummary, facetText } from "./engine.js";
 import { gradeOf } from "./scoring.js";
 import { GRADE_LABELS, QUALITY_NOTE, ABOUT } from "./data/copy.js";
 import { NORM_NOTE } from "./data/norms.js";
+import { FACET_DEFS } from "./data/facet-defs.js";
 
 const ORDER = ["O", "C", "E", "A", "N"];
 const OPT_LABELS = ["非常不像我", "不太像我", "说不清", "比较像我", "非常像我"];
@@ -323,6 +324,11 @@ export function renderReport(app, state, h) {
   bars.forEach((b) => io.observe(b));
 
   app.querySelector("[data-action='restart']").addEventListener("click", h.restart);
+  app.querySelectorAll(".acc-head").forEach((btn) => {
+    btn.addEventListener("click", () => {
+      btn.closest(".acc-item").classList.toggle("open");
+    });
+  });
   app.querySelector("[data-action='share']").addEventListener("click", () => {
     import("./share.js").then(({ generateShareCard }) =>
       generateShareCard({
@@ -436,7 +442,10 @@ function domainBlockHtml(k, r, di) {
           <span>${name} · ${GRADE_LABELS[g] ?? "—"} · 高于 ${r.facetPcts[fid] ?? "—"}% 的人</span>
           <span class="acc-icon">+</span>
         </button>
-        <div class="acc-body">${facetText(k, i, g)}</div>
+        <div class="acc-body">
+          <p class="facet-def">${FACET_DEFS[fid].text}<span class="facet-def-src">—— 侧面定义,Soto &amp; John (2017)</span></p>
+          ${facetText(k, i, g)}
+        </div>
       </div>`;
     })
     .join("");
