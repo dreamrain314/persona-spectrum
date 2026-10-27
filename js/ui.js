@@ -66,7 +66,7 @@ export function renderLanding(app, state, h) {
         <div class="meta-item"><b>100% 本地</b><span>无账号 · 数据不出浏览器</span></div>
       </div>
       <div class="reveal" style="--i:4"><button class="btn" data-action="begin">开始测评 <span class="arr">→</span></button></div>
-      <p class="social-proof reveal" style="--i:4" id="test-count" hidden>已有 <b>—</b> 人完成测评 · 数据不离开浏览器</p>
+      <p class="social-proof reveal" style="--i:4" id="test-count" hidden>已有 <b>—</b> 人完成测评</p>
       <div class="trait-strip reveal" style="--i:5">
         ${ORDER.map((k) => `<span class="trait-item"><span class="dot dot-${k}"></span>${DOMAINS[k].name}<span class="en">${DOMAINS[k].en}</span></span>`).join("")}
       </div>
