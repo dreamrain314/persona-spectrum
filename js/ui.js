@@ -367,7 +367,7 @@ function pctExplainerHtml(r) {
   return `
     <div class="pct-explainer reveal">
       <span class="eyebrow">数字怎么读 · 百分位</span>
-      <p>报告里所有数字都是<b>百分位</b>:你超过了参考人群里百分之多少的人。它不是答对率,也不是百分制成绩——50 代表人群的正中间,不是及格线。</p>
+      <p>报告里所有数字都是<b>百分位</b>:你超过了参考人群里百分之多少的人。</p>
       <div class="pct-demo">
         <p class="pct-demo-line">以你的<b>${DOMAINS[key].name}</b>为例<span class="pct-demo-num">${pct}</span></p>
         <div class="pct-bar" role="img" aria-label="${DOMAINS[key].name}百分位 ${pct},每 100 人里约有 ${pct} 人低于你">
