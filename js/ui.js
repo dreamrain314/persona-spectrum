@@ -8,6 +8,7 @@ import { gradeOf } from "./scoring.js";
 import { GRADE_LABELS, QUALITY_NOTE, ABOUT } from "./data/copy.js";
 import { NORM_NOTE } from "./data/norms.js";
 import { FACET_DEFS } from "./data/facet-defs.js";
+import { fetchTestCount } from "./counter.js";
 
 const ORDER = ["O", "C", "E", "A", "N"];
 const OPT_LABELS = ["非常不像我", "不太像我", "说不清", "比较像我", "非常像我"];
@@ -65,12 +66,20 @@ export function renderLanding(app, state, h) {
         <div class="meta-item"><b>100% 本地</b><span>无账号 · 数据不出浏览器</span></div>
       </div>
       <div class="reveal" style="--i:4"><button class="btn" data-action="begin">开始测评 <span class="arr">→</span></button></div>
+      <p class="social-proof reveal" style="--i:4" id="test-count" hidden>已有 <b>—</b> 人完成测评 · 数据不离开浏览器</p>
       <div class="trait-strip reveal" style="--i:5">
         ${ORDER.map((k) => `<span class="trait-item"><span class="dot dot-${k}"></span>${DOMAINS[k].name}<span class="en">${DOMAINS[k].en}</span></span>`).join("")}
       </div>
       ${historyHtml(hist)}
     </section>`;
   app.querySelector("[data-action='begin']").addEventListener("click", h.begin);
+  fetchTestCount().then((n) => {
+    if (n == null) return;
+    const el = app.querySelector("#test-count");
+    if (!el) return;
+    el.querySelector("b").textContent = n.toLocaleString("zh-CN");
+    el.hidden = false;
+  });
   app.querySelectorAll("[data-action='history-view']").forEach((b) =>
     b.addEventListener("click", () => h.viewHistory(+b.dataset.historyView))
   );

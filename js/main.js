@@ -5,6 +5,7 @@ import {
   renderLanding, renderSetup, renderSelfRating,
   renderQuiz, renderComputing, renderReport,
 } from "./ui.js";
+import { bumpTestCount } from "./counter.js";
 
 const state = {
   screen: "landing",
@@ -62,6 +63,7 @@ const handlers = {
           setTimeout(() => {
             state.results = computeAll(state);
             saveHistory(state);
+            bumpTestCount(); // 匿名计数:仅统计完成次数,失败静默
             go("report");
           }, 1600);
         });

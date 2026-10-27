@@ -238,6 +238,9 @@ html { scrollbar-color: #d8d5cf var(--bg); scrollbar-width: thin; }
 .meta-item { display: flex; flex-direction: column; gap: 0.2rem; }
 .meta-item b { font: 600 1.05rem var(--sans); }
 .meta-item span { font: 400 0.78rem var(--sans); color: #85807a; }
+/* 社会证明:匿名完成计数(计数服务不可用时整行隐藏,不影响任何功能) */
+.social-proof { margin: 1.1rem 0 0; font-size: 0.9rem; color: var(--muted); letter-spacing: 0.02em; }
+.social-proof b { font: 600 1rem var(--sans); color: var(--ink); }
 /* 五维色点行(编辑风:纯文字+色点,非胶囊) */
 .trait-strip { display: flex; flex-wrap: wrap; gap: 0.6rem 1.8rem; margin: 2.4rem 0 0; align-items: baseline; }
 .trait-item { display: inline-flex; align-items: baseline; gap: 0.55em; font-size: 0.9rem; color: var(--ink-soft); }
